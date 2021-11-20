@@ -14,26 +14,6 @@ bool rightButtonPressed = false;
 bool leftButtonPressed = false;
 bool centerButtonPressed = false;
 
-// Start / Reset
-void on_left_button() {
-	leftButtonPressed = !leftButtonPressed;
-	running = true;
-}
-
-void on_center_button() {
-	centerButtonPressed = !centerButtonPressed;
-	if (centerButtonPressed) {
-	} else {
-	}
-}
-
-void on_right_button() {
-	rightButtonPressed = !rightButtonPressed;
-	if (rightButtonPressed) {
-	} else {
-	}
-}
-
 /**
  * Runs initialization code. This occurs as soon as the program is started.
  *
@@ -45,10 +25,7 @@ void initialize() {
 	pros::lcd::set_text(0, "THE GREAT MOTOR TESTER");
 	pros::lcd::set_text(1, "----------------------");
 	pros::lcd::set_text(2, "Press the left button to start");
-
-	pros::lcd::register_btn0_cb(on_left_button);
-	pros::lcd::register_btn1_cb(on_center_button);
-	pros::lcd::register_btn2_cb(on_right_button);
+	pros::lcd::print(7, "START");
 }
 
 /**
@@ -97,58 +74,61 @@ void autonomous() {}
  */
 void opcontrol() {
 	while (true) {
-		if(running){
-			if(phase == 0){
-				startTime = pros::millis();
-				phase++;
-			}
-			if(phase == 1){
-				torqueSummation += testedMotor.getTorque(); // nm
-				currentSummation += testedMotor.getCurrentDraw(); // mA
-				tempSummation += testedMotor.getTemperature(); // C
-				count++;
-				pros::lcd::print(0, "Warming up (%i)...", (60000 - pros::millis() + startTime) / 1000 + 1);
-				pros::lcd::print(1, "Average torque(J):%f\n", torqueSummation / count);
-				pros::lcd::print(2, "Average current(mA):%f\n", currentSummation / count);
-				pros::lcd::print(3, "Average temperature(C):%f\n", tempSummation / count);
-				pros::lcd::print(4, "Total Revolutions:%f\n", testedMotor.getPosition());
-				testedMotor.moveVelocity(270);
-				if(pros::millis() - startTime > 10000) phase = 2; // SHOULD BE 60000 TODO
-			}
-			if(phase == 2){
-				startTime = pros::millis();
-				testedMotor.tarePosition();
-				phase++;
-				torqueSummation = 0;
-				currentSummation = 0;
-				tempSummation = 0;
-				count = 0;
-			}
-			if(phase == 3){
-				pros::lcd::print(0, "Collecting data (%i)...", (10000 - pros::millis() + startTime) / 1000 + 1);
-				pros::lcd::clear_line(1);
-				pros::lcd::clear_line(2);
-				pros::lcd::clear_line(3);
-				pros::lcd::clear_line(4);
-				torqueSummation += testedMotor.getTorque(); // nm
-				currentSummation += testedMotor.getCurrentDraw(); // mA
-				tempSummation += testedMotor.getTemperature(); // C
-				count++;
-				if(pros::millis() - startTime > 10000) phase = 4;
-			}
-			if(phase == 4){
-				testedMotor.moveVelocity(0);
-				pros::lcd::print(0, "Results:");
-				pros::lcd::print(1, "Average torque(J):%f\n", torqueSummation / count);
-				pros::lcd::print(2, "Average current(mA):%f\n", currentSummation / count);
-				pros::lcd::print(3, "Average temperature(C):%f\n", tempSummation / count);
-				pros::lcd::print(4, "Total Revolutions:%f\n", testedMotor.getPosition());
-				pros::lcd::print(5, "J/A = %f", (torqueSummation * 1000 / currentSummation));
-				while(!leftButtonPressed){
-					pros::delay(1000);
-				}
-			}
+		if(phase == 0){
+			startTime = pros::millis();
+			phase++;
+			leftButtonPressed = false;
 		}
-		pros::delay(20);
+		if(phase == 1){
+			torqueSummation += testedMotor.getTorque(); // nm
+			currentSummation += testedMotor.getCurrentDraw(); // mA
+			tempSummation += testedMotor.getTemperature(); // C
+			count++;
+			pros::lcd::print(0, "Warming up (%i)...", (60000 - pros::millis() + startTime) / 1000 + 1);
+			pros::lcd::print(1, "Average torque(J):%f\n", torqueSummation / count);
+			pros::lcd::print(2, "Average current(mA):%f\n", currentSummation / count);
+			pros::lcd::print(3, "Average temperature(C):%f\n", tempSummation / count);
+			pros::lcd::print(4, "Total Revolutions:%f\n", testedMotor.getPosition());
+			pros::lcd::clear_line(5);
+			pros::lcd::clear_line(7);
+			testedMotor.moveVelocity(270);
+			if(pros::millis() - startTime > 10000) phase = 2; // SHOULD BE 60000 TODO
+		}
+		if(phase == 2){
+			startTime = pros::millis();
+			testedMotor.tarePosition();
+			phase++;
+			torqueSummation = 0;
+			currentSummation = 0;
+			tempSummation = 0;
+			count = 0;
+		}
+		if(phase == 3){
+			pros::lcd::print(0, "Collecting data (%i)...", (10000 - pros::millis() + startTime) / 1000 + 1);
+			pros::lcd::clear_line(1);
+			pros::lcd::clear_line(2);
+			pros::lcd::clear_line(3);
+			pros::lcd::clear_line(4);
+			torqueSummation += testedMotor.getTorque(); // nm
+			currentSummation += testedMotor.getCurrentDraw(); // mA
+			tempSummation += testedMotor.getTemperature(); // C
+			count++;
+			if(pros::millis() - startTime > 10000) phase = 4;
+		}
+		if(phase == 4){
+			testedMotor.moveVelocity(0);
+			pros::lcd::print(0, "Results:");
+			pros::lcd::print(1, "Average torque(J):%f\n", torqueSummation / count);
+			pros::lcd::print(2, "Average current(mA):%f\n", currentSummation / count);
+			pros::lcd::print(3, "Average temperature(C):%f\n", tempSummation / count);
+			pros::lcd::print(4, "Total Revolutions:%f\n", testedMotor.getPosition());
+			pros::lcd::print(5, "J/A = %f", (torqueSummation * 1000 / currentSummation));
+			pros::lcd::print(7, "RESTART");
+			while(pros::lcd::read_buttons() != 4){
+				pros::delay(5);
+			}
+			phase = 0;
+		}
+		pros::delay(5);
 	}
 }
