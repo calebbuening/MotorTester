@@ -1,18 +1,36 @@
 #include "main.h"
 
-/**
- * A callback function for LLEMU's center button.
- *
- * When this callback is fired, it will toggle line 2 of the LCD text between
- * "I was pressed!" and nothing.
- */
+bool running = false;
+int phase = 0;
+float torqueSummation = 0;
+float currentSummation = 0;
+float tempSummation = 0;
+float count = 0;
+int startTime = 0;
+
+okapi::Motor testedMotor(1, false, okapi::AbstractMotor::gearset::green, okapi::AbstractMotor::encoderUnits::rotations);
+
+bool rightButtonPressed = false;
+bool leftButtonPressed = false;
+bool centerButtonPressed = false;
+
+// Start / Reset
+void on_left_button() {
+	leftButtonPressed = !leftButtonPressed;
+	running = true;
+}
+
 void on_center_button() {
-	static bool pressed = false;
-	pressed = !pressed;
-	if (pressed) {
-		pros::lcd::set_text(2, "I was pressed!");
+	centerButtonPressed = !centerButtonPressed;
+	if (centerButtonPressed) {
 	} else {
-		pros::lcd::clear_line(2);
+	}
+}
+
+void on_right_button() {
+	rightButtonPressed = !rightButtonPressed;
+	if (rightButtonPressed) {
+	} else {
 	}
 }
 
@@ -24,9 +42,13 @@ void on_center_button() {
  */
 void initialize() {
 	pros::lcd::initialize();
-	pros::lcd::set_text(1, "Hello PROS User!");
+	pros::lcd::set_text(0, "THE GREAT MOTOR TESTER");
+	pros::lcd::set_text(1, "----------------------");
+	pros::lcd::set_text(2, "Press the left button to start");
 
+	pros::lcd::register_btn0_cb(on_left_button);
 	pros::lcd::register_btn1_cb(on_center_button);
+	pros::lcd::register_btn2_cb(on_right_button);
 }
 
 /**
@@ -74,19 +96,59 @@ void autonomous() {}
  * task, not resume it from where it left off.
  */
 void opcontrol() {
-	pros::Controller master(pros::E_CONTROLLER_MASTER);
-	pros::Motor left_mtr(1);
-	pros::Motor right_mtr(2);
-
 	while (true) {
-		pros::lcd::print(0, "%d %d %d", (pros::lcd::read_buttons() & LCD_BTN_LEFT) >> 2,
-		                 (pros::lcd::read_buttons() & LCD_BTN_CENTER) >> 1,
-		                 (pros::lcd::read_buttons() & LCD_BTN_RIGHT) >> 0);
-		int left = master.get_analog(ANALOG_LEFT_Y);
-		int right = master.get_analog(ANALOG_RIGHT_Y);
-
-		left_mtr = left;
-		right_mtr = right;
+		if(running){
+			if(phase == 0){
+				startTime = pros::millis();
+				phase++;
+			}
+			if(phase == 1){
+				torqueSummation += testedMotor.getTorque(); // nm
+				currentSummation += testedMotor.getCurrentDraw(); // mA
+				tempSummation += testedMotor.getTemperature(); // C
+				count++;
+				pros::lcd::print(0, "Warming up (%i)...", (60000 - pros::millis() + startTime) / 1000 + 1);
+				pros::lcd::print(1, "Average torque(J):%f\n", torqueSummation / count);
+				pros::lcd::print(2, "Average current(mA):%f\n", currentSummation / count);
+				pros::lcd::print(3, "Average temperature(C):%f\n", tempSummation / count);
+				pros::lcd::print(4, "Total Revolutions:%f\n", testedMotor.getPosition());
+				testedMotor.moveVelocity(270);
+				if(pros::millis() - startTime > 10000) phase = 2; // SHOULD BE 60000 TODO
+			}
+			if(phase == 2){
+				startTime = pros::millis();
+				testedMotor.tarePosition();
+				phase++;
+				torqueSummation = 0;
+				currentSummation = 0;
+				tempSummation = 0;
+				count = 0;
+			}
+			if(phase == 3){
+				pros::lcd::print(0, "Collecting data (%i)...", (10000 - pros::millis() + startTime) / 1000 + 1);
+				pros::lcd::clear_line(1);
+				pros::lcd::clear_line(2);
+				pros::lcd::clear_line(3);
+				pros::lcd::clear_line(4);
+				torqueSummation += testedMotor.getTorque(); // nm
+				currentSummation += testedMotor.getCurrentDraw(); // mA
+				tempSummation += testedMotor.getTemperature(); // C
+				count++;
+				if(pros::millis() - startTime > 10000) phase = 4;
+			}
+			if(phase == 4){
+				testedMotor.moveVelocity(0);
+				pros::lcd::print(0, "Results:");
+				pros::lcd::print(1, "Average torque(J):%f\n", torqueSummation / count);
+				pros::lcd::print(2, "Average current(mA):%f\n", currentSummation / count);
+				pros::lcd::print(3, "Average temperature(C):%f\n", tempSummation / count);
+				pros::lcd::print(4, "Total Revolutions:%f\n", testedMotor.getPosition());
+				pros::lcd::print(5, "J/A = %f", (torqueSummation * 1000 / currentSummation));
+				while(!leftButtonPressed){
+					pros::delay(1000);
+				}
+			}
+		}
 		pros::delay(20);
 	}
 }
