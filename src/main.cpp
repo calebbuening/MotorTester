@@ -3,8 +3,9 @@
 bool running = false;
 int phase = 0;
 float torqueSummation = 0;
-float currentSummation = 0;
+float powerSummation = 0;
 float tempSummation = 0;
+float effSummation = 0;
 float count = 0;
 int startTime = 0;
 
@@ -80,26 +81,26 @@ void opcontrol() {
 			leftButtonPressed = false;
 		}
 		if(phase == 1){
-			torqueSummation += testedMotor.getTorque(); // nm
-			currentSummation += testedMotor.getCurrentDraw(); // mA
-			tempSummation += testedMotor.getTemperature(); // C
+			torqueSummation = (torqueSummation * 0.995) + (testedMotor.getTorque() * 0.005); // nm
+			powerSummation = (powerSummation * 0.995) + (testedMotor.getPower() * 0.005); // mA
+			effSummation = (effSummation * 0.995) + (testedMotor.getEfficiency() * 0.005);
 			count++;
 			pros::lcd::print(0, "Warming up (%i)...", (60000 - pros::millis() + startTime) / 1000 + 1);
-			pros::lcd::print(1, "Average torque(J):%f\n", torqueSummation / count);
-			pros::lcd::print(2, "Average current(mA):%f\n", currentSummation / count);
-			pros::lcd::print(3, "Average temperature(C):%f\n", tempSummation / count);
-			pros::lcd::print(4, "Total Revolutions:%f\n", testedMotor.getPosition());
-			pros::lcd::clear_line(5);
+			pros::lcd::print(1, "Torque(Nm):%f\n", torqueSummation);
+			pros::lcd::print(2, "Power(W)):%f\n", powerSummation);
+			pros::lcd::print(3, "Temperature(C):%f\n", testedMotor.getTemperature());
+			pros::lcd::print(5, "Total Revolutions:%f\n", testedMotor.getPosition());
+			pros::lcd::print(6, "Efficiency:%f\n", effSummation);
 			pros::lcd::clear_line(7);
-			testedMotor.moveVelocity(270);
-			if(pros::millis() - startTime > 10000) phase = 2; // SHOULD BE 60000 TODO
+			testedMotor.moveVelocity(180);
+			if(pros::millis() - startTime > 60000) phase = 2; // SHOULD BE 60000 TODO
 		}
 		if(phase == 2){
 			startTime = pros::millis();
 			testedMotor.tarePosition();
 			phase++;
 			torqueSummation = 0;
-			currentSummation = 0;
+			powerSummation = 0;
 			tempSummation = 0;
 			count = 0;
 		}
@@ -110,8 +111,7 @@ void opcontrol() {
 			pros::lcd::clear_line(3);
 			pros::lcd::clear_line(4);
 			torqueSummation += testedMotor.getTorque(); // nm
-			currentSummation += testedMotor.getCurrentDraw(); // mA
-			tempSummation += testedMotor.getTemperature(); // C
+			powerSummation += testedMotor.getPower(); // mA
 			count++;
 			if(pros::millis() - startTime > 10000) phase = 4;
 		}
@@ -119,10 +119,10 @@ void opcontrol() {
 			testedMotor.moveVelocity(0);
 			pros::lcd::print(0, "Results:");
 			pros::lcd::print(1, "Average torque(J):%f\n", torqueSummation / count);
-			pros::lcd::print(2, "Average current(mA):%f\n", currentSummation / count);
-			pros::lcd::print(3, "Average temperature(C):%f\n", tempSummation / count);
+			pros::lcd::print(2, "Average power(W):%f\n", powerSummation / count);
+			pros::lcd::print(3, "Temperature(C):%f\n", testedMotor.getTemperature());
 			pros::lcd::print(4, "Total Revolutions:%f\n", testedMotor.getPosition());
-			pros::lcd::print(5, "J/A = %f", (torqueSummation * 1000 / currentSummation));
+			pros::lcd::print(5, "Nm/A = %f", (torqueSummation * 1000 / powerSummation));
 			pros::lcd::print(7, "RESTART");
 			while(pros::lcd::read_buttons() != 4){
 				pros::delay(5);
