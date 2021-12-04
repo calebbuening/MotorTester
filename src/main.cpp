@@ -9,7 +9,7 @@ float effSummation = 0;
 float count = 0;
 int startTime = 0;
 
-okapi::Motor testedMotor(1, false, okapi::AbstractMotor::gearset::green, okapi::AbstractMotor::encoderUnits::rotations);
+okapi::Motor testedMotor(3, false, okapi::AbstractMotor::gearset::green, okapi::AbstractMotor::encoderUnits::rotations);
 
 bool rightButtonPressed = false;
 bool leftButtonPressed = false;
@@ -87,7 +87,7 @@ void opcontrol() {
 			count++;
 			pros::lcd::print(0, "Warming up (%i)...", (60000 - pros::millis() + startTime) / 1000 + 1);
 			pros::lcd::print(1, "Torque(Nm):%f\n", torqueSummation);
-			pros::lcd::print(2, "Power(W)):%f\n", powerSummation);
+			pros::lcd::print(2, "Power(W):%f\n", powerSummation);
 			pros::lcd::print(3, "Temperature(C):%f\n", testedMotor.getTemperature());
 			pros::lcd::print(5, "Total Revolutions:%f\n", testedMotor.getPosition());
 			pros::lcd::print(6, "Efficiency:%f\n", effSummation);
@@ -110,6 +110,8 @@ void opcontrol() {
 			pros::lcd::clear_line(2);
 			pros::lcd::clear_line(3);
 			pros::lcd::clear_line(4);
+			pros::lcd::clear_line(5);
+			pros::lcd::clear_line(6);
 			torqueSummation += testedMotor.getTorque(); // nm
 			powerSummation += testedMotor.getPower(); // mA
 			count++;
