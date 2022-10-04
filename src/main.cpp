@@ -75,11 +75,13 @@ void autonomous() {}
  */
 void opcontrol() {
 	while (true) {
+		// Start count phase
 		if(phase == 0){
 			startTime = pros::millis();
 			phase++;
 			leftButtonPressed = false;
 		}
+		// Warming up phase
 		if(phase == 1){
 			torqueSummation = (torqueSummation * 0.995) + (testedMotor.getTorque() * 0.005); // nm
 			powerSummation = (powerSummation * 0.995) + (testedMotor.getPower() * 0.005); // mA
@@ -95,6 +97,7 @@ void opcontrol() {
 			testedMotor.moveVelocity(180);
 			if(pros::millis() - startTime > 60000) phase = 2; // SHOULD BE 60000 TODO
 		}
+		// Start clock for testing phase
 		if(phase == 2){
 			startTime = pros::millis();
 			testedMotor.tarePosition();
@@ -104,6 +107,7 @@ void opcontrol() {
 			tempSummation = 0;
 			count = 0;
 		}
+		// Testing phase
 		if(phase == 3){
 			pros::lcd::print(0, "Collecting data (%i)...", (10000 - pros::millis() + startTime) / 1000 + 1);
 			pros::lcd::clear_line(1);
@@ -117,6 +121,7 @@ void opcontrol() {
 			count++;
 			if(pros::millis() - startTime > 10000) phase = 4;
 		}
+		// Display results phase
 		if(phase == 4){
 			testedMotor.moveVelocity(0);
 			pros::lcd::print(0, "Results:");
